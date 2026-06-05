@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thống Kê Điểm Thi Tuyển Sinh</title>
     <style>
+        /* --- CSS THIẾT KẾ GIAO DIỆN MINIMALISM --- */
         :root {
             --primary-color: #1e3a8a;
-            /* Xanh Navy chủ đạo */
             --bg-color: #f8fafc;
             --text-color: #1e293b;
             --border-color: #cbd5e1;
@@ -37,7 +37,6 @@
             gap: 25px;
         }
 
-        /* Tiêu đề tổng */
         header {
             grid-column: 1 / -1;
             background: var(--white);
@@ -121,7 +120,6 @@
 
         .table-wrapper {
             max-height: 75vh;
-            /* Giới hạn chiều cao bảng, cuộn nội dung bên trong */
             overflow-y: auto;
             border: 1px solid var(--border-color);
             border-radius: 6px;
@@ -148,10 +146,11 @@
             z-index: 10;
         }
 
+        /* --- CẬP NHẬT CSS: TẤT CẢ CÁC CỘT ĐIỂM ĐỀU CÓ THỂ SORT --- */
         th.sortable {
             cursor: pointer;
             user-select: none;
-            transition: background 0.2s;
+            transition: background 0.2s, color 0.2s;
         }
 
         th.sortable:hover {
@@ -159,10 +158,24 @@
             color: var(--primary-color);
         }
 
+        /* Ký hiệu mũi tên chỉ trạng thái sort */
         th.sortable::after {
             content: " ↕";
-            font-size: 12px;
-            opacity: 0.6;
+            font-size: 11px;
+            opacity: 0.4;
+            margin-left: 5px;
+        }
+
+        th.sort-desc::after {
+            content: " ⬇";
+            opacity: 1;
+            color: var(--primary-color);
+        }
+
+        th.sort-asc::after {
+            content: " ⬆";
+            opacity: 1;
+            color: var(--primary-color);
         }
 
         tr:hover {
@@ -212,10 +225,10 @@
                         <tr>
                             <th>STT</th>
                             <th>Số Báo Danh</th>
-                            <th>Điểm Toán</th>
-                            <th>Điểm Văn</th>
-                            <th>Điểm Anh</th>
-                            <th class="sortable" id="sort-total" onclick="toggleSort()">Tổng Điểm</th>
+                            <th class="sortable" id="th-math" onclick="handleSort('math')">Điểm Toán</th>
+                            <th class="sortable" id="th-literature" onclick="handleSort('literature')">Điểm Văn</th>
+                            <th class="sortable" id="th-english" onclick="handleSort('english')">Điểm Anh</th>
+                            <th class="sortable" id="th-total_score" onclick="handleSort('total_score')">Tổng Điểm</th>
                         </tr>
                     </thead>
                     <tbody id="data-body">
@@ -5347,7 +5360,12 @@
             }
         ];
 
-        let currentSortOrder = 'none';
+        let sortStates = {
+            math: 'none',
+            literature: 'none',
+            english: 'none',
+            total_score: 'none'
+        };
 
         function renderTable(data) {
             const tbody = document.getElementById("data-body");
@@ -5371,32 +5389,50 @@
             document.getElementById("total-count").innerText = data.length;
         }
 
-        function toggleSort() {
-            const headerBtn = document.getElementById("sort-total");
+        function handleSort(columnKey) {
+            const currentOrder = sortStates[columnKey];
+            let nextOrder = 'desc';
+            if (currentOrder === 'desc') nextOrder = 'asc';
 
-            if (currentSortOrder === 'none' || currentSortOrder === 'asc') {
-                rawData.sort((a, b) => parseFloat(b.total_score) - parseFloat(a.total_score));
-                currentSortOrder = 'desc';
-                headerBtn.innerText = "Tổng Điểm ⬇";
-            } else {
-                rawData.sort((a, b) => parseFloat(a.total_score) - parseFloat(b.total_score));
-                currentSortOrder = 'asc';
-                headerBtn.innerText = "Tổng Điểm ⬆";
-            }
+            Object.keys(sortStates).forEach(key => {
+                sortStates[key] = 'none';
+                const th = document.getElementById(`th-${key}`);
+                if (th) th.className = "sortable";
+            });
+
+            sortStates[columnKey] = nextOrder;
+            const activeTh = document.getElementById(`th-${columnKey}`);
+            if (activeTh) activeTh.classList.add(nextOrder === 'desc' ? 'sort-desc' : 'sort-asc');
+
+            rawData.sort((a, b) => {
+                let compare = parseFloat(b[columnKey]) - parseFloat(a[columnKey]);
+                if (nextOrder === 'asc') {
+                    compare = parseFloat(a[columnKey]) - parseFloat(b[columnKey]);
+                }
+
+                if (compare === 0) {
+                    const priorityKeys = ['total_score', 'math', 'literature', 'english'];
+                    for (let key of priorityKeys) {
+                        const subCompare = parseFloat(b[key]) - parseFloat(a[key]);
+                        if (subCompare !== 0) return subCompare;
+                    }
+
+                    return String(a.sbd).localeCompare(String(b.sbd));
+                }
+
+                return compare;
+            });
 
             renderTable(rawData);
         }
 
         function countStudents() {
             const threshold = parseFloat(document.getElementById("score-threshold").value);
-
             if (isNaN(threshold)) {
                 document.getElementById("student-count").innerText = "0";
                 return;
             }
-
             const matchCount = rawData.filter(student => parseFloat(student.total_score) >= threshold).length;
-
             document.getElementById("student-count").innerText = matchCount;
         }
 
