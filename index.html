@@ -1,0 +1,5411 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống Kê Điểm Thi Tuyển Sinh</title>
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            /* Xanh Navy chủ đạo */
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --border-color: #cbd5e1;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 25px;
+        }
+
+        /* Tiêu đề tổng */
+        header {
+            grid-column: 1 / -1;
+            background: var(--white);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid var(--primary-color);
+        }
+
+        header h1 {
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+
+        .sidebar {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--bg-color);
+            color: var(--primary-color);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 15px;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+
+        .result-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .result-box span {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: block;
+        }
+
+        .main-content {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .table-wrapper {
+            max-height: 75vh;
+            /* Giới hạn chiều cao bảng, cuộn nội dung bên trong */
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        th.sortable:hover {
+            background-color: #e2e8f0;
+            color: var(--primary-color);
+        }
+
+        th.sortable::after {
+            content: " ↕";
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Hệ Thống Tra Cứu & Phân Tích Phổ Điểm</h1>
+            <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Dữ liệu hiển thị trực quan (Bấm Ctrl + F để tìm
+                nhanh SBD)</p>
+        </header>
+
+        <div class="sidebar">
+            <h2>Bộ Lọc Thống Kê</h2>
+            <div class="input-group">
+                <label for="score-threshold">Nhập mốc tổng điểm cần đếm:</label>
+                <input type="number" id="score-threshold" min="0" max="30" step="0.25" value="20"
+                    oninput="countStudents()">
+            </div>
+            <div class="result-box">
+                <p>Số thí sinh đạt mức điểm trên:</p>
+                <span id="student-count">0</span>
+                <p style="font-size: 13px; color: #64748b; margin-top: 5px;">Thí sinh (Tổng số: <span id="total-count"
+                        style="display:inline; font-size:14px; font-weight:600; color:#334155;">0</span>)</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Số Báo Danh</th>
+                            <th>Điểm Toán</th>
+                            <th>Điểm Văn</th>
+                            <th>Điểm Anh</th>
+                            <th class="sortable" id="sort-total" onclick="toggleSort()">Tổng Điểm</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        const rawData = [
+            {
+                "sbd": "07000001",
+                "math": 6.5,
+                "literature": 6.5,
+                "english": 3,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000002",
+                "math": 6.75,
+                "literature": 6.5,
+                "english": 6.25,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000003",
+                "math": 4.75,
+                "literature": 7.75,
+                "english": 3.5,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000004",
+                "math": 7.25,
+                "literature": 5.25,
+                "english": 7,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000005",
+                "math": 8,
+                "literature": 7.5,
+                "english": 4,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000006",
+                "math": 7.75,
+                "literature": 6.75,
+                "english": 5.25,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000007",
+                "math": 7.35,
+                "literature": 6,
+                "english": 5.25,
+                "total_score": 18.6
+            },
+            {
+                "sbd": "07000008",
+                "math": 9.25,
+                "literature": 9,
+                "english": 8.25,
+                "total_score": 26.5
+            },
+            {
+                "sbd": "07000009",
+                "math": 5.5,
+                "literature": 7.75,
+                "english": 6,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000010",
+                "math": 9,
+                "literature": 8,
+                "english": 5.25,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000011",
+                "math": 5.5,
+                "literature": 7.25,
+                "english": 5,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000012",
+                "math": 8.25,
+                "literature": 8.25,
+                "english": 7.5,
+                "total_score": 24
+            },
+            {
+                "sbd": "07000013",
+                "math": 8.5,
+                "literature": 8.25,
+                "english": 9,
+                "total_score": 25.75
+            },
+            {
+                "sbd": "07000014",
+                "math": 7.5,
+                "literature": 6.5,
+                "english": 5,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000015",
+                "math": 8.75,
+                "literature": 8.25,
+                "english": 8,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000016",
+                "math": 5.75,
+                "literature": 6.75,
+                "english": 3.75,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000017",
+                "math": 9.25,
+                "literature": 8.25,
+                "english": 7.75,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000018",
+                "math": 3.75,
+                "literature": 4.75,
+                "english": 3,
+                "total_score": 11.5
+            },
+            {
+                "sbd": "07000019",
+                "math": 6.25,
+                "literature": 7.25,
+                "english": 4.25,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000020",
+                "math": 7.75,
+                "literature": 8.5,
+                "english": 9.5,
+                "total_score": 25.75
+            },
+            {
+                "sbd": "07000021",
+                "math": 5.75,
+                "literature": 7.75,
+                "english": 3.75,
+                "total_score": 17.25
+            },
+            {
+                "sbd": "07000022",
+                "math": 4.75,
+                "literature": 7.75,
+                "english": 2,
+                "total_score": 14.5
+            },
+            {
+                "sbd": "07000023",
+                "math": 7,
+                "literature": 8,
+                "english": 4.75,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000024",
+                "math": 4.75,
+                "literature": 6,
+                "english": 4.75,
+                "total_score": 15.5
+            },
+            {
+                "sbd": "07000025",
+                "math": 10,
+                "literature": 8.5,
+                "english": 6.75,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000026",
+                "math": 9.25,
+                "literature": 7.75,
+                "english": 7.75,
+                "total_score": 24.75
+            },
+            {
+                "sbd": "07000027",
+                "math": 10,
+                "literature": 8,
+                "english": 9.75,
+                "total_score": 27.75
+            },
+            {
+                "sbd": "07000028",
+                "math": 6.5,
+                "literature": 4.5,
+                "english": 3.25,
+                "total_score": 14.25
+            },
+            {
+                "sbd": "07000029",
+                "math": 5.75,
+                "literature": 7.75,
+                "english": 3.25,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000030",
+                "math": 6,
+                "literature": 6.75,
+                "english": 4.25,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000031",
+                "math": 8,
+                "literature": 9,
+                "english": 4.25,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000032",
+                "math": 5.95,
+                "literature": 5.75,
+                "english": 2.75,
+                "total_score": 14.45
+            },
+            {
+                "sbd": "07000033",
+                "math": 5.75,
+                "literature": 4.75,
+                "english": 2.25,
+                "total_score": 12.75
+            },
+            {
+                "sbd": "07000034",
+                "math": 9,
+                "literature": 8,
+                "english": 7.25,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000035",
+                "math": 7.25,
+                "literature": 5,
+                "english": 6.25,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000036",
+                "math": 8.75,
+                "literature": 7.5,
+                "english": 6,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000037",
+                "math": 8.25,
+                "literature": 7,
+                "english": 7,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000038",
+                "math": 4.75,
+                "literature": 2.5,
+                "english": 2.25,
+                "total_score": 9.5
+            },
+            {
+                "sbd": "07000039",
+                "math": 5.75,
+                "literature": 7.5,
+                "english": 3.5,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000040",
+                "math": 7.25,
+                "literature": 7,
+                "english": 7,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000041",
+                "math": 9.25,
+                "literature": 8.5,
+                "english": 8.75,
+                "total_score": 26.5
+            },
+            {
+                "sbd": "07000042",
+                "math": 6.85,
+                "literature": 6.75,
+                "english": 5.25,
+                "total_score": 18.85
+            },
+            {
+                "sbd": "07000043",
+                "math": 6.5,
+                "literature": 6,
+                "english": 3.75,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000044",
+                "math": 8.5,
+                "literature": 9,
+                "english": 9,
+                "total_score": 26.5
+            },
+            {
+                "sbd": "07000045",
+                "math": 9.75,
+                "literature": 7,
+                "english": 9.25,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000046",
+                "math": 7.5,
+                "literature": 8,
+                "english": 8.5,
+                "total_score": 24
+            },
+            {
+                "sbd": "07000047",
+                "math": 9.5,
+                "literature": 8,
+                "english": 8.5,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000048",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 5.25,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000049",
+                "math": 8.75,
+                "literature": 7.5,
+                "english": 8.75,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000050",
+                "math": 7.25,
+                "literature": 6,
+                "english": 4.75,
+                "total_score": 18
+            },
+            {
+                "sbd": "07000051",
+                "math": 8.25,
+                "literature": 5.75,
+                "english": 6,
+                "total_score": 20
+            },
+            {
+                "sbd": "07000052",
+                "math": 7.25,
+                "literature": 8,
+                "english": 6.5,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000053",
+                "math": 7.25,
+                "literature": 5.5,
+                "english": 6.5,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000054",
+                "math": 9.25,
+                "literature": 7.25,
+                "english": 7.25,
+                "total_score": 23.75
+            },
+            {
+                "sbd": "07000055",
+                "math": 7.25,
+                "literature": 7.5,
+                "english": 7.25,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000056",
+                "math": 7,
+                "literature": 8,
+                "english": 5.25,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000057",
+                "math": 3.1,
+                "literature": 3,
+                "english": 3,
+                "total_score": 9.1
+            },
+            {
+                "sbd": "07000058",
+                "math": 3.85,
+                "literature": 6,
+                "english": 4.5,
+                "total_score": 14.35
+            },
+            {
+                "sbd": "07000059",
+                "math": 6.25,
+                "literature": 7.75,
+                "english": 6.5,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000060",
+                "math": 5.6,
+                "literature": 6.25,
+                "english": 5.25,
+                "total_score": 17.1
+            },
+            {
+                "sbd": "07000061",
+                "math": 8.75,
+                "literature": 6.75,
+                "english": 8.75,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000062",
+                "math": 7.75,
+                "literature": 7.75,
+                "english": 6.75,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000063",
+                "math": 3.5,
+                "literature": 5.5,
+                "english": 2.75,
+                "total_score": 11.75
+            },
+            {
+                "sbd": "07000064",
+                "math": 5.25,
+                "literature": 7,
+                "english": 4,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000065",
+                "math": 8.5,
+                "literature": 6.75,
+                "english": 3.25,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000066",
+                "math": 8,
+                "literature": 4,
+                "english": 5.5,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000067",
+                "math": 8.75,
+                "literature": 8.25,
+                "english": 6,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000068",
+                "math": 8.5,
+                "literature": 8,
+                "english": 3,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000069",
+                "math": 4.5,
+                "literature": 4.75,
+                "english": 3.25,
+                "total_score": 12.5
+            },
+            {
+                "sbd": "07000070",
+                "math": 4.75,
+                "literature": 7.75,
+                "english": 6.5,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000071",
+                "math": 7.35,
+                "literature": 7.5,
+                "english": 4.25,
+                "total_score": 19.1
+            },
+            {
+                "sbd": "07000072",
+                "math": 10,
+                "literature": 7.75,
+                "english": 8.25,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000073",
+                "math": 7.75,
+                "literature": 6.5,
+                "english": 4.25,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000074",
+                "math": 6.75,
+                "literature": 7.75,
+                "english": 9,
+                "total_score": 23.5
+            },
+            {
+                "sbd": "07000075",
+                "math": 3,
+                "literature": 2.75,
+                "english": 2.75,
+                "total_score": 8.5
+            },
+            {
+                "sbd": "07000076",
+                "math": 8.5,
+                "literature": 7.5,
+                "english": 4.25,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000077",
+                "math": 7.5,
+                "literature": 5,
+                "english": 5.5,
+                "total_score": 18
+            },
+            {
+                "sbd": "07000078",
+                "math": 9.25,
+                "literature": 7.5,
+                "english": 6.5,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000079",
+                "math": 4.75,
+                "literature": 5,
+                "english": 2.75,
+                "total_score": 12.5
+            },
+            {
+                "sbd": "07000080",
+                "math": 7.75,
+                "literature": 6.25,
+                "english": 4.5,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000081",
+                "math": 9.75,
+                "literature": 8.75,
+                "english": 9.75,
+                "total_score": 28.25
+            },
+            {
+                "sbd": "07000082",
+                "math": 6.6,
+                "literature": 6,
+                "english": 6.25,
+                "total_score": 18.85
+            },
+            {
+                "sbd": "07000083",
+                "math": 8.75,
+                "literature": 8.25,
+                "english": 8.25,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000084",
+                "math": 8.75,
+                "literature": 8.5,
+                "english": 8.75,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000085",
+                "math": 8,
+                "literature": 7.5,
+                "english": 5.25,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000086",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 3.5,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000087",
+                "math": 6.75,
+                "literature": 7.75,
+                "english": 4,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000088",
+                "math": 6.75,
+                "literature": 6.75,
+                "english": 4,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000089",
+                "math": 7,
+                "literature": 7.25,
+                "english": 4.25,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000090",
+                "math": 8.75,
+                "literature": 8.25,
+                "english": 6,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000091",
+                "math": 8.5,
+                "literature": 7.5,
+                "english": 8.25,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000092",
+                "math": 7,
+                "literature": 8.75,
+                "english": 5,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000093",
+                "math": 6.5,
+                "literature": 4.25,
+                "english": 1.5,
+                "total_score": 12.25
+            },
+            {
+                "sbd": "07000094",
+                "math": 6.25,
+                "literature": 6.5,
+                "english": 4,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000095",
+                "math": 8,
+                "literature": 6.25,
+                "english": 5.75,
+                "total_score": 20
+            },
+            {
+                "sbd": "07000096",
+                "math": 8,
+                "literature": 6,
+                "english": 6,
+                "total_score": 20
+            },
+            {
+                "sbd": "07000097",
+                "math": 6.75,
+                "literature": 6.5,
+                "english": 3.5,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000098",
+                "math": 6.35,
+                "literature": 6,
+                "english": 5,
+                "total_score": 17.35
+            },
+            {
+                "sbd": "07000099",
+                "math": 8.5,
+                "literature": 6.5,
+                "english": 5,
+                "total_score": 20
+            },
+            {
+                "sbd": "07000100",
+                "math": 8.25,
+                "literature": 7.5,
+                "english": 4.5,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000101",
+                "math": 8.75,
+                "literature": 7,
+                "english": 6.75,
+                "total_score": 22.5
+            },
+            {
+                "sbd": "07000102",
+                "math": 9.5,
+                "literature": 7.5,
+                "english": 8.75,
+                "total_score": 25.75
+            },
+            {
+                "sbd": "07000103",
+                "math": 2.2,
+                "literature": 3,
+                "english": 2.25,
+                "total_score": 7.45
+            },
+            {
+                "sbd": "07000104",
+                "math": 7.5,
+                "literature": 6.75,
+                "english": 5.25,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000105",
+                "math": 5.1,
+                "literature": 6,
+                "english": 5,
+                "total_score": 16.1
+            },
+            {
+                "sbd": "07000106",
+                "math": 6,
+                "literature": 7,
+                "english": 4.75,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000107",
+                "math": 7.5,
+                "literature": 8,
+                "english": 4.25,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000108",
+                "math": 6.5,
+                "literature": 7.75,
+                "english": 5.25,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000109",
+                "math": 8.25,
+                "literature": 8.5,
+                "english": 8.5,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000110",
+                "math": 9.5,
+                "literature": 7.25,
+                "english": 7.5,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000111",
+                "math": 9,
+                "literature": 8.5,
+                "english": 9.25,
+                "total_score": 26.75
+            },
+            {
+                "sbd": "07000112",
+                "math": 8.75,
+                "literature": 8.25,
+                "english": 8.5,
+                "total_score": 25.5
+            },
+            {
+                "sbd": "07000113",
+                "math": 3,
+                "literature": 6.25,
+                "english": 2,
+                "total_score": 11.25
+            },
+            {
+                "sbd": "07000114",
+                "math": 9,
+                "literature": 7.25,
+                "english": 7.75,
+                "total_score": 24
+            },
+            {
+                "sbd": "07000115",
+                "math": 4.1,
+                "literature": 8,
+                "english": 6.75,
+                "total_score": 18.85
+            },
+            {
+                "sbd": "07000116",
+                "math": 4.5,
+                "literature": 4.5,
+                "english": 2.75,
+                "total_score": 11.75
+            },
+            {
+                "sbd": "07000118",
+                "math": 8.25,
+                "literature": 6.25,
+                "english": 6.5,
+                "total_score": 21
+            },
+            {
+                "sbd": "07000119",
+                "math": 2.35,
+                "literature": 3.5,
+                "english": 1.5,
+                "total_score": 7.35
+            },
+            {
+                "sbd": "07000120",
+                "math": 8.25,
+                "literature": 8.5,
+                "english": 7.25,
+                "total_score": 24
+            },
+            {
+                "sbd": "07000121",
+                "math": 4.1,
+                "literature": 5,
+                "english": 3.25,
+                "total_score": 12.35
+            },
+            {
+                "sbd": "07000122",
+                "math": 9.75,
+                "literature": 7.5,
+                "english": 5,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000123",
+                "math": 9.25,
+                "literature": 8,
+                "english": 7.25,
+                "total_score": 24.5
+            },
+            {
+                "sbd": "07000124",
+                "math": 9,
+                "literature": 8.25,
+                "english": 8.75,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000125",
+                "math": 7.5,
+                "literature": 7.25,
+                "english": 6,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000126",
+                "math": 3.25,
+                "literature": 1.75,
+                "english": 2.25,
+                "total_score": 7.25
+            },
+            {
+                "sbd": "07000127",
+                "math": 3.5,
+                "literature": 3,
+                "english": 2,
+                "total_score": 8.5
+            },
+            {
+                "sbd": "07000128",
+                "math": 8,
+                "literature": 8,
+                "english": 6.75,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000129",
+                "math": 8.5,
+                "literature": 7.5,
+                "english": 6.75,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000130",
+                "math": 8.75,
+                "literature": 8,
+                "english": 6.25,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000131",
+                "math": 6.35,
+                "literature": 8,
+                "english": 4.5,
+                "total_score": 18.85
+            },
+            {
+                "sbd": "07000132",
+                "math": 5,
+                "literature": 6,
+                "english": 4.25,
+                "total_score": 15.25
+            },
+            {
+                "sbd": "07000133",
+                "math": 8,
+                "literature": 8,
+                "english": 7,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000134",
+                "math": 7.75,
+                "literature": 8.75,
+                "english": 5,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000135",
+                "math": 9.25,
+                "literature": 8.25,
+                "english": 5.75,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000136",
+                "math": 4.5,
+                "literature": 6,
+                "english": 3,
+                "total_score": 13.5
+            },
+            {
+                "sbd": "07000137",
+                "math": 5.5,
+                "literature": 8.5,
+                "english": 4.25,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000138",
+                "math": 9,
+                "literature": 8.25,
+                "english": 7.25,
+                "total_score": 24.5
+            },
+            {
+                "sbd": "07000139",
+                "math": 5.75,
+                "literature": 7,
+                "english": 4.75,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000140",
+                "math": 7,
+                "literature": 7.5,
+                "english": 3.25,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000141",
+                "math": 5.25,
+                "literature": 7.5,
+                "english": 2,
+                "total_score": 14.75
+            },
+            {
+                "sbd": "07000142",
+                "math": 8.75,
+                "literature": 8,
+                "english": 6.25,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000143",
+                "math": 8,
+                "literature": 7.25,
+                "english": 7.5,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000144",
+                "math": 7.75,
+                "literature": 7.5,
+                "english": 4.5,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000145",
+                "math": 7.75,
+                "literature": 7,
+                "english": 6.75,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000146",
+                "math": 6.6,
+                "literature": 6.75,
+                "english": 5.25,
+                "total_score": 18.6
+            },
+            {
+                "sbd": "07000147",
+                "math": 8.75,
+                "literature": 6.5,
+                "english": 2.5,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000148",
+                "math": 10,
+                "literature": 8.5,
+                "english": 6.5,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000149",
+                "math": 4.75,
+                "literature": 5,
+                "english": 4.25,
+                "total_score": 14
+            },
+            {
+                "sbd": "07000150",
+                "math": 8.25,
+                "literature": 5.5,
+                "english": 3.25,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000151",
+                "math": 4.5,
+                "literature": 1.5,
+                "english": 2.25,
+                "total_score": 8.25
+            },
+            {
+                "sbd": "07000152",
+                "math": 7,
+                "literature": 7,
+                "english": 2.25,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000153",
+                "math": 3.5,
+                "literature": 5,
+                "english": 2,
+                "total_score": 10.5
+            },
+            {
+                "sbd": "07000154",
+                "math": 7.5,
+                "literature": 7,
+                "english": 6.25,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000155",
+                "math": 10,
+                "literature": 7.25,
+                "english": 8,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000156",
+                "math": 2.85,
+                "literature": 2.5,
+                "english": 2.75,
+                "total_score": 8.1
+            },
+            {
+                "sbd": "07000157",
+                "math": 9,
+                "literature": 7.75,
+                "english": 4.75,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000158",
+                "math": 3.75,
+                "literature": 5.5,
+                "english": 2,
+                "total_score": 11.25
+            },
+            {
+                "sbd": "07000159",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 5,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000160",
+                "math": 5,
+                "literature": 7,
+                "english": 3,
+                "total_score": 15
+            },
+            {
+                "sbd": "07000161",
+                "math": 6.25,
+                "literature": 6,
+                "english": 3.25,
+                "total_score": 15.5
+            },
+            {
+                "sbd": "07000162",
+                "math": 9.25,
+                "literature": 6.75,
+                "english": 3,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000163",
+                "math": 6,
+                "literature": 7,
+                "english": 3.25,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000164",
+                "math": 4.85,
+                "literature": 3.75,
+                "english": 3.5,
+                "total_score": 12.1
+            },
+            {
+                "sbd": "07000165",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 4,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000166",
+                "math": 5.35,
+                "literature": 7.5,
+                "english": 6.5,
+                "total_score": 19.35
+            },
+            {
+                "sbd": "07000167",
+                "math": 3.75,
+                "literature": 5,
+                "english": 1.75,
+                "total_score": 10.5
+            },
+            {
+                "sbd": "07000169",
+                "math": 9.25,
+                "literature": 8.75,
+                "english": 9.5,
+                "total_score": 27.5
+            },
+            {
+                "sbd": "07000170",
+                "math": 9.25,
+                "literature": 8.25,
+                "english": 5.75,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000171",
+                "math": 8.25,
+                "literature": 7.75,
+                "english": 6,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000172",
+                "math": 7.5,
+                "literature": 7.75,
+                "english": 5.5,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000173",
+                "math": 8.75,
+                "literature": 7.25,
+                "english": 5.75,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000174",
+                "math": 6.75,
+                "literature": 7.25,
+                "english": 4,
+                "total_score": 18
+            },
+            {
+                "sbd": "07000175",
+                "math": 9,
+                "literature": 8.75,
+                "english": 9.25,
+                "total_score": 27
+            },
+            {
+                "sbd": "07000176",
+                "math": 2.6,
+                "literature": 7.5,
+                "english": 4.75,
+                "total_score": 14.85
+            },
+            {
+                "sbd": "07000177",
+                "math": 8.5,
+                "literature": 8.75,
+                "english": 8.75,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000178",
+                "math": 4.25,
+                "literature": 5,
+                "english": 2.25,
+                "total_score": 11.5
+            },
+            {
+                "sbd": "07000179",
+                "math": 8.75,
+                "literature": 6.5,
+                "english": 5.5,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000180",
+                "math": 5.85,
+                "literature": 7.5,
+                "english": 5.5,
+                "total_score": 18.85
+            },
+            {
+                "sbd": "07000181",
+                "math": 9,
+                "literature": 7.25,
+                "english": 5.75,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000182",
+                "math": 9.75,
+                "literature": 6.5,
+                "english": 4.5,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000183",
+                "math": 9.5,
+                "literature": 8.5,
+                "english": 8,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000184",
+                "math": 3.5,
+                "literature": 4.5,
+                "english": 5,
+                "total_score": 13
+            },
+            {
+                "sbd": "07000185",
+                "math": 7.25,
+                "literature": 5.75,
+                "english": 3.5,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000186",
+                "math": 5.85,
+                "literature": 5,
+                "english": 3,
+                "total_score": 13.85
+            },
+            {
+                "sbd": "07000187",
+                "math": 6.75,
+                "literature": 7.5,
+                "english": 7.25,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000188",
+                "math": 4.5,
+                "literature": 5.75,
+                "english": 2.75,
+                "total_score": 13
+            },
+            {
+                "sbd": "07000189",
+                "math": 4.75,
+                "literature": 7.25,
+                "english": 3.5,
+                "total_score": 15.5
+            },
+            {
+                "sbd": "07000190",
+                "math": 8.5,
+                "literature": 8.5,
+                "english": 8,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000191",
+                "math": 6,
+                "literature": 7.5,
+                "english": 4.25,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000192",
+                "math": 9.75,
+                "literature": 8.5,
+                "english": 8.25,
+                "total_score": 26.5
+            },
+            {
+                "sbd": "07000193",
+                "math": 6.5,
+                "literature": 6.75,
+                "english": 6,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000194",
+                "math": 9.25,
+                "literature": 7.5,
+                "english": 4,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000195",
+                "math": 7.5,
+                "literature": 6.5,
+                "english": 2.75,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000196",
+                "math": 7.5,
+                "literature": 7.75,
+                "english": 5.75,
+                "total_score": 21
+            },
+            {
+                "sbd": "07000197",
+                "math": 6.35,
+                "literature": 7.5,
+                "english": 5,
+                "total_score": 18.85
+            },
+            {
+                "sbd": "07000198",
+                "math": 7.5,
+                "literature": 7.75,
+                "english": 6.5,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000199",
+                "math": 6.25,
+                "literature": 7.75,
+                "english": 7.25,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000200",
+                "math": 5.75,
+                "literature": 7,
+                "english": 7.5,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000201",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 8,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000202",
+                "math": 7.25,
+                "literature": 7,
+                "english": 4.25,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000203",
+                "math": 6.75,
+                "literature": 8.25,
+                "english": 9.5,
+                "total_score": 24.5
+            },
+            {
+                "sbd": "07000204",
+                "math": 9.25,
+                "literature": 8.25,
+                "english": 7.5,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000205",
+                "math": 9.25,
+                "literature": 7.75,
+                "english": 7.75,
+                "total_score": 24.75
+            },
+            {
+                "sbd": "07000206",
+                "math": 9,
+                "literature": 7.5,
+                "english": 8,
+                "total_score": 24.5
+            },
+            {
+                "sbd": "07000207",
+                "math": 9.75,
+                "literature": 8,
+                "english": 8,
+                "total_score": 25.75
+            },
+            {
+                "sbd": "07000208",
+                "math": 2.6,
+                "literature": 4.75,
+                "english": 3.25,
+                "total_score": 10.6
+            },
+            {
+                "sbd": "07000209",
+                "math": 7,
+                "literature": 7.75,
+                "english": 4,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000210",
+                "math": 7,
+                "literature": 4.75,
+                "english": 4.5,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000211",
+                "math": 8.75,
+                "literature": 7.5,
+                "english": 8.5,
+                "total_score": 24.75
+            },
+            {
+                "sbd": "07000212",
+                "math": 6.85,
+                "literature": 7.5,
+                "english": 5.5,
+                "total_score": 19.85
+            },
+            {
+                "sbd": "07000213",
+                "math": 8.75,
+                "literature": 8.75,
+                "english": 8.5,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000214",
+                "math": 7,
+                "literature": 7.75,
+                "english": 8.5,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000215",
+                "math": 2.5,
+                "literature": 6,
+                "english": 2,
+                "total_score": 10.5
+            },
+            {
+                "sbd": "07000216",
+                "math": 8.75,
+                "literature": 7.25,
+                "english": 5.75,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000217",
+                "math": 7.25,
+                "literature": 7.75,
+                "english": 7.25,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000218",
+                "math": 6.25,
+                "literature": 6.25,
+                "english": 3.5,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000219",
+                "math": 7.75,
+                "literature": 7.75,
+                "english": 5.25,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000220",
+                "math": 7.25,
+                "literature": 8,
+                "english": 7,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000221",
+                "math": 8.25,
+                "literature": 7.75,
+                "english": 4.5,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000222",
+                "math": 9.75,
+                "literature": 9,
+                "english": 8,
+                "total_score": 26.75
+            },
+            {
+                "sbd": "07000223",
+                "math": 9.5,
+                "literature": 7.75,
+                "english": 8.25,
+                "total_score": 25.5
+            },
+            {
+                "sbd": "07000224",
+                "math": 9.5,
+                "literature": 7.25,
+                "english": 5.5,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000225",
+                "math": 9.75,
+                "literature": 6.25,
+                "english": 7,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000226",
+                "math": 8,
+                "literature": 7.5,
+                "english": 4.5,
+                "total_score": 20
+            },
+            {
+                "sbd": "07000227",
+                "math": 9.25,
+                "literature": 7.25,
+                "english": 6,
+                "total_score": 22.5
+            },
+            {
+                "sbd": "07000228",
+                "math": 8.5,
+                "literature": 7.25,
+                "english": 5.75,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000229",
+                "math": 4,
+                "literature": 5.75,
+                "english": 4.75,
+                "total_score": 14.5
+            },
+            {
+                "sbd": "07000230",
+                "math": 4,
+                "literature": 6.5,
+                "english": 3.75,
+                "total_score": 14.25
+            },
+            {
+                "sbd": "07000231",
+                "math": 3.75,
+                "literature": 4.5,
+                "english": 1.75,
+                "total_score": 10
+            },
+            {
+                "sbd": "07000232",
+                "math": 8.75,
+                "literature": 7.5,
+                "english": 5.5,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000233",
+                "math": 6,
+                "literature": 7.25,
+                "english": 6.5,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000234",
+                "math": 7.35,
+                "literature": 4.75,
+                "english": 2,
+                "total_score": 14.1
+            },
+            {
+                "sbd": "07000235",
+                "math": 6.35,
+                "literature": 6.75,
+                "english": 4,
+                "total_score": 17.1
+            },
+            {
+                "sbd": "07000236",
+                "math": 9,
+                "literature": 5.75,
+                "english": 8,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000237",
+                "math": 6,
+                "literature": 4.5,
+                "english": 4,
+                "total_score": 14.5
+            },
+            {
+                "sbd": "07000238",
+                "math": 9.5,
+                "literature": 7.25,
+                "english": 7,
+                "total_score": 23.75
+            },
+            {
+                "sbd": "07000239",
+                "math": 4.75,
+                "literature": 5.5,
+                "english": 5.75,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000240",
+                "math": 9.5,
+                "literature": 7,
+                "english": 7,
+                "total_score": 23.5
+            },
+            {
+                "sbd": "07000241",
+                "math": 7,
+                "literature": 7.5,
+                "english": 7.25,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000242",
+                "math": 8.5,
+                "literature": 8,
+                "english": 8,
+                "total_score": 24.5
+            },
+            {
+                "sbd": "07000243",
+                "math": 3.5,
+                "literature": 2.25,
+                "english": 3.75,
+                "total_score": 9.5
+            },
+            {
+                "sbd": "07000244",
+                "math": 8.25,
+                "literature": 7.25,
+                "english": 3.75,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000245",
+                "math": 8.75,
+                "literature": 6.25,
+                "english": 6.5,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000246",
+                "math": 5.75,
+                "literature": 7.25,
+                "english": 4,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000247",
+                "math": 5.5,
+                "literature": 6.5,
+                "english": 3.5,
+                "total_score": 15.5
+            },
+            {
+                "sbd": "07000248",
+                "math": 7,
+                "literature": 6.5,
+                "english": 5.5,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000249",
+                "math": 6,
+                "literature": 7,
+                "english": 3.25,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000250",
+                "math": 3.35,
+                "literature": 2.75,
+                "english": 3,
+                "total_score": 9.1
+            },
+            {
+                "sbd": "07000251",
+                "math": 8.25,
+                "literature": 8.25,
+                "english": 7.5,
+                "total_score": 24
+            },
+            {
+                "sbd": "07000252",
+                "math": 6.6,
+                "literature": 5.25,
+                "english": 2.5,
+                "total_score": 14.35
+            },
+            {
+                "sbd": "07000253",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 7.25,
+                "total_score": 23.5
+            },
+            {
+                "sbd": "07000254",
+                "math": 9,
+                "literature": 7,
+                "english": 6.5,
+                "total_score": 22.5
+            },
+            {
+                "sbd": "07000255",
+                "math": 4.25,
+                "literature": 6.25,
+                "english": 4.75,
+                "total_score": 15.25
+            },
+            {
+                "sbd": "07000256",
+                "math": 8.25,
+                "literature": 8,
+                "english": 8.75,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000257",
+                "math": 5.75,
+                "literature": 7.25,
+                "english": 3.5,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000258",
+                "math": 3.6,
+                "literature": 5,
+                "english": 2.5,
+                "total_score": 11.1
+            },
+            {
+                "sbd": "07000259",
+                "math": 6.5,
+                "literature": 6.25,
+                "english": 3.25,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000260",
+                "math": 2.5,
+                "literature": 3.75,
+                "english": 2,
+                "total_score": 8.25
+            },
+            {
+                "sbd": "07000261",
+                "math": 6.1,
+                "literature": 7.25,
+                "english": 3.75,
+                "total_score": 17.1
+            },
+            {
+                "sbd": "07000262",
+                "math": 6.25,
+                "literature": 7.25,
+                "english": 5.75,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000263",
+                "math": 8.25,
+                "literature": 7.25,
+                "english": 7,
+                "total_score": 22.5
+            },
+            {
+                "sbd": "07000264",
+                "math": 5.75,
+                "literature": 5.5,
+                "english": 2.75,
+                "total_score": 14
+            },
+            {
+                "sbd": "07000265",
+                "math": 9,
+                "literature": 6.5,
+                "english": 4.75,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000266",
+                "math": 6.25,
+                "literature": 3.25,
+                "english": 4.25,
+                "total_score": 13.75
+            },
+            {
+                "sbd": "07000267",
+                "math": 5.1,
+                "literature": 4,
+                "english": 3.25,
+                "total_score": 12.35
+            },
+            {
+                "sbd": "07000268",
+                "math": 10,
+                "literature": 9,
+                "english": 9.5,
+                "total_score": 28.5
+            },
+            {
+                "sbd": "07000269",
+                "math": 7.5,
+                "literature": 7.5,
+                "english": 9.25,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000270",
+                "math": 8.75,
+                "literature": 8,
+                "english": 7,
+                "total_score": 23.75
+            },
+            {
+                "sbd": "07000271",
+                "math": 8,
+                "literature": 7.25,
+                "english": 9.25,
+                "total_score": 24.5
+            },
+            {
+                "sbd": "07000272",
+                "math": 9.75,
+                "literature": 5.75,
+                "english": 5.5,
+                "total_score": 21
+            },
+            {
+                "sbd": "07000273",
+                "math": 8.25,
+                "literature": 8,
+                "english": 9,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000274",
+                "math": 8.25,
+                "literature": 6.75,
+                "english": 7.25,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000275",
+                "math": 6,
+                "literature": 6.25,
+                "english": 4.75,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000276",
+                "math": 8.25,
+                "literature": 8.5,
+                "english": 7.25,
+                "total_score": 24
+            },
+            {
+                "sbd": "07000277",
+                "math": 2.6,
+                "literature": 6.25,
+                "english": 3.25,
+                "total_score": 12.1
+            },
+            {
+                "sbd": "07000278",
+                "math": 8.5,
+                "literature": 7,
+                "english": 8,
+                "total_score": 23.5
+            },
+            {
+                "sbd": "07000279",
+                "math": 2.6,
+                "literature": 5.25,
+                "english": 3.5,
+                "total_score": 11.35
+            },
+            {
+                "sbd": "07000280",
+                "math": 7,
+                "literature": 7.25,
+                "english": 6,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000281",
+                "math": 8.75,
+                "literature": 7,
+                "english": 6,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000282",
+                "math": 9,
+                "literature": 7,
+                "english": 5.5,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000283",
+                "math": 9,
+                "literature": 7.5,
+                "english": 6.75,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000284",
+                "math": 6.75,
+                "literature": 6.5,
+                "english": 5.75,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000285",
+                "math": 6.5,
+                "literature": 8.5,
+                "english": 5.25,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000286",
+                "math": 4.85,
+                "literature": 5.5,
+                "english": 4.75,
+                "total_score": 15.1
+            },
+            {
+                "sbd": "07000287",
+                "math": 5.25,
+                "literature": 7.75,
+                "english": 7.5,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000288",
+                "math": 7.75,
+                "literature": 8,
+                "english": 8.5,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000289",
+                "math": 5,
+                "literature": 4.75,
+                "english": 3.5,
+                "total_score": 13.25
+            },
+            {
+                "sbd": "07000290",
+                "math": 5.25,
+                "literature": 6.25,
+                "english": 2.5,
+                "total_score": 14
+            },
+            {
+                "sbd": "07000291",
+                "math": 9.25,
+                "literature": 8.5,
+                "english": 6.5,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000292",
+                "math": 9.75,
+                "literature": 7.75,
+                "english": 7.75,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000293",
+                "math": 6.1,
+                "literature": 5,
+                "english": 3.25,
+                "total_score": 14.35
+            },
+            {
+                "sbd": "07000294",
+                "math": 6,
+                "literature": 5.75,
+                "english": 3.25,
+                "total_score": 15
+            },
+            {
+                "sbd": "07000295",
+                "math": 3.85,
+                "literature": 3.75,
+                "english": 5.25,
+                "total_score": 12.85
+            },
+            {
+                "sbd": "07000296",
+                "math": 9.25,
+                "literature": 7.5,
+                "english": 2.75,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000297",
+                "math": 5.5,
+                "literature": 6.75,
+                "english": 1.75,
+                "total_score": 14
+            },
+            {
+                "sbd": "07000298",
+                "math": 9.25,
+                "literature": 7.5,
+                "english": 8.5,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000299",
+                "math": 4.75,
+                "literature": 7.5,
+                "english": 4,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000300",
+                "math": 4.35,
+                "literature": 5.5,
+                "english": 3.5,
+                "total_score": 13.35
+            },
+            {
+                "sbd": "07000301",
+                "math": 6.75,
+                "literature": 6.25,
+                "english": 4.75,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000302",
+                "math": 6.5,
+                "literature": 6.5,
+                "english": 5.5,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000303",
+                "math": 7.75,
+                "literature": 6,
+                "english": 5.5,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000304",
+                "math": 5,
+                "literature": 5.5,
+                "english": 1.75,
+                "total_score": 12.25
+            },
+            {
+                "sbd": "07000305",
+                "math": 7.75,
+                "literature": 5,
+                "english": 5,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000306",
+                "math": 4.5,
+                "literature": 5,
+                "english": 2.75,
+                "total_score": 12.25
+            },
+            {
+                "sbd": "07000307",
+                "math": 7.85,
+                "literature": 7.5,
+                "english": 4.75,
+                "total_score": 20.1
+            },
+            {
+                "sbd": "07000308",
+                "math": 7.75,
+                "literature": 8,
+                "english": 4.75,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000309",
+                "math": 8.75,
+                "literature": 8.75,
+                "english": 7.5,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000310",
+                "math": 3.5,
+                "literature": 5.5,
+                "english": 2.25,
+                "total_score": 11.25
+            },
+            {
+                "sbd": "07000311",
+                "math": 3.5,
+                "literature": 5.25,
+                "english": 2.75,
+                "total_score": 11.5
+            },
+            {
+                "sbd": "07000312",
+                "math": 5.75,
+                "literature": 5.25,
+                "english": 3,
+                "total_score": 14
+            },
+            {
+                "sbd": "07000313",
+                "math": 8,
+                "literature": 8.25,
+                "english": 6.75,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000314",
+                "math": 3.75,
+                "literature": 5.25,
+                "english": 4.25,
+                "total_score": 13.25
+            },
+            {
+                "sbd": "07000315",
+                "math": 8,
+                "literature": 6.75,
+                "english": 2.25,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000316",
+                "math": 3.75,
+                "literature": 5.5,
+                "english": 2.5,
+                "total_score": 11.75
+            },
+            {
+                "sbd": "07000317",
+                "math": 7,
+                "literature": 7.25,
+                "english": 2,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000318",
+                "math": 7.75,
+                "literature": 5.5,
+                "english": 1.75,
+                "total_score": 15
+            },
+            {
+                "sbd": "07000319",
+                "math": 7.75,
+                "literature": 3,
+                "english": 5,
+                "total_score": 15.75
+            },
+            {
+                "sbd": "07000320",
+                "math": 4.75,
+                "literature": 5,
+                "english": 1.75,
+                "total_score": 11.5
+            },
+            {
+                "sbd": "07000321",
+                "math": 9.5,
+                "literature": 6,
+                "english": 3.75,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000322",
+                "math": 6.85,
+                "literature": 6.25,
+                "english": 2.25,
+                "total_score": 15.35
+            },
+            {
+                "sbd": "07000323",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 9.25,
+                "total_score": 25.5
+            },
+            {
+                "sbd": "07000324",
+                "math": 6,
+                "literature": 6.75,
+                "english": 5.5,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000325",
+                "math": 7.1,
+                "literature": 8.25,
+                "english": 6.5,
+                "total_score": 21.85
+            },
+            {
+                "sbd": "07000326",
+                "math": 6.6,
+                "literature": 1.25,
+                "english": 3.25,
+                "total_score": 11.1
+            },
+            {
+                "sbd": "07000327",
+                "math": 8.25,
+                "literature": 7,
+                "english": 8,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000328",
+                "math": 6.5,
+                "literature": 6.75,
+                "english": 3.25,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000329",
+                "math": 7,
+                "literature": 7.75,
+                "english": 4.75,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000330",
+                "math": 3.75,
+                "literature": 6.25,
+                "english": 3.75,
+                "total_score": 13.75
+            },
+            {
+                "sbd": "07000331",
+                "math": 3.75,
+                "literature": 2,
+                "english": 2,
+                "total_score": 7.75
+            },
+            {
+                "sbd": "07000332",
+                "math": 7,
+                "literature": 7.75,
+                "english": 5.5,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000333",
+                "math": 5,
+                "literature": 8.25,
+                "english": 2.5,
+                "total_score": 15.75
+            },
+            {
+                "sbd": "07000334",
+                "math": 6.5,
+                "literature": 6.75,
+                "english": 4,
+                "total_score": 17.25
+            },
+            {
+                "sbd": "07000335",
+                "math": 5.85,
+                "literature": 7.5,
+                "english": 7,
+                "total_score": 20.35
+            },
+            {
+                "sbd": "07000336",
+                "math": 4.1,
+                "literature": 8.25,
+                "english": 6.75,
+                "total_score": 19.1
+            },
+            {
+                "sbd": "07000337",
+                "math": 6.35,
+                "literature": 6.75,
+                "english": 2.75,
+                "total_score": 15.85
+            },
+            {
+                "sbd": "07000338",
+                "math": 6.5,
+                "literature": 8,
+                "english": 3.75,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000339",
+                "math": 2.5,
+                "literature": 6,
+                "english": 1.25,
+                "total_score": 9.75
+            },
+            {
+                "sbd": "07000340",
+                "math": 7.75,
+                "literature": 8.5,
+                "english": 6.5,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000341",
+                "math": 8.5,
+                "literature": 8.5,
+                "english": 6,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000342",
+                "math": 5.25,
+                "literature": 7,
+                "english": 5.75,
+                "total_score": 18
+            },
+            {
+                "sbd": "07000343",
+                "math": 6,
+                "literature": 6.5,
+                "english": 5.25,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000344",
+                "math": 9.75,
+                "literature": 8.25,
+                "english": 8,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000345",
+                "math": 8.75,
+                "literature": 7.75,
+                "english": 5.25,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000346",
+                "math": 6.25,
+                "literature": 4.5,
+                "english": 2.25,
+                "total_score": 13
+            },
+            {
+                "sbd": "07000347",
+                "math": 9,
+                "literature": 8.25,
+                "english": 9,
+                "total_score": 26.25
+            },
+            {
+                "sbd": "07000348",
+                "math": 7.5,
+                "literature": 4.75,
+                "english": 2.5,
+                "total_score": 14.75
+            },
+            {
+                "sbd": "07000349",
+                "math": 2.85,
+                "literature": 7.75,
+                "english": 1.75,
+                "total_score": 12.35
+            },
+            {
+                "sbd": "07000350",
+                "math": 7.25,
+                "literature": 7.75,
+                "english": 3.75,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000351",
+                "math": 2,
+                "literature": 2,
+                "english": 2.5,
+                "total_score": 6.5
+            },
+            {
+                "sbd": "07000352",
+                "math": 7.75,
+                "literature": 8.5,
+                "english": 7.5,
+                "total_score": 23.75
+            },
+            {
+                "sbd": "07000353",
+                "math": 8.75,
+                "literature": 7.75,
+                "english": 6.5,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000354",
+                "math": 5.25,
+                "literature": 8.75,
+                "english": 5,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000355",
+                "math": 2.25,
+                "literature": 7,
+                "english": 2,
+                "total_score": 11.25
+            },
+            {
+                "sbd": "07000356",
+                "math": 5.25,
+                "literature": 7.25,
+                "english": 2.75,
+                "total_score": 15.25
+            },
+            {
+                "sbd": "07000357",
+                "math": 6.75,
+                "literature": 7.5,
+                "english": 3,
+                "total_score": 17.25
+            },
+            {
+                "sbd": "07000358",
+                "math": 7.75,
+                "literature": 8.25,
+                "english": 6,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000359",
+                "math": 8,
+                "literature": 8.5,
+                "english": 5.75,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000360",
+                "math": 6.75,
+                "literature": 8.5,
+                "english": 5.25,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000361",
+                "math": 5.75,
+                "literature": 7.25,
+                "english": 4.5,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000362",
+                "math": 5.5,
+                "literature": 7.75,
+                "english": 6.5,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000363",
+                "math": 9.75,
+                "literature": 7.75,
+                "english": 8.5,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000364",
+                "math": 8,
+                "literature": 6.5,
+                "english": 6.25,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000365",
+                "math": 7.75,
+                "literature": 6.5,
+                "english": 4.75,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000366",
+                "math": 9,
+                "literature": 7.25,
+                "english": 5.5,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000367",
+                "math": 7.75,
+                "literature": 8.25,
+                "english": 6.5,
+                "total_score": 22.5
+            },
+            {
+                "sbd": "07000368",
+                "math": 5.25,
+                "literature": 6.5,
+                "english": 4.75,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000369",
+                "math": 8.5,
+                "literature": 7.5,
+                "english": 6,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000370",
+                "math": 9.25,
+                "literature": 8.75,
+                "english": 8,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000371",
+                "math": 7.5,
+                "literature": 7.75,
+                "english": 3.5,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000372",
+                "math": 6.35,
+                "literature": 3.75,
+                "english": 4.25,
+                "total_score": 14.35
+            },
+            {
+                "sbd": "07000373",
+                "math": 8,
+                "literature": 6.75,
+                "english": 8.75,
+                "total_score": 23.5
+            },
+            {
+                "sbd": "07000374",
+                "math": 9.5,
+                "literature": 7.5,
+                "english": 4.75,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000375",
+                "math": 5.25,
+                "literature": 5,
+                "english": 2.75,
+                "total_score": 13
+            },
+            {
+                "sbd": "07000376",
+                "math": 7.5,
+                "literature": 6.5,
+                "english": 3.75,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000377",
+                "math": 6,
+                "literature": 6.5,
+                "english": 3.75,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000378",
+                "math": 4.5,
+                "literature": 4.5,
+                "english": 2.5,
+                "total_score": 11.5
+            },
+            {
+                "sbd": "07000379",
+                "math": 2.5,
+                "literature": 3.75,
+                "english": 3,
+                "total_score": 9.25
+            },
+            {
+                "sbd": "07000380",
+                "math": 9,
+                "literature": 5.25,
+                "english": 3.5,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000381",
+                "math": 5.75,
+                "literature": 5,
+                "english": 2.5,
+                "total_score": 13.25
+            },
+            {
+                "sbd": "07000382",
+                "math": 8.75,
+                "literature": 8,
+                "english": 3.75,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000383",
+                "math": 2.85,
+                "literature": 7.25,
+                "english": 3.5,
+                "total_score": 13.6
+            },
+            {
+                "sbd": "07000384",
+                "math": 9,
+                "literature": 9,
+                "english": 6.25,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000385",
+                "math": 7.75,
+                "literature": 6.25,
+                "english": 3.5,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000386",
+                "math": 7.25,
+                "literature": 8,
+                "english": 7,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000387",
+                "math": 6.5,
+                "literature": 7.5,
+                "english": 4.75,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000388",
+                "math": 9,
+                "literature": 7.75,
+                "english": 6.75,
+                "total_score": 23.5
+            },
+            {
+                "sbd": "07000389",
+                "math": 4.85,
+                "literature": 7,
+                "english": 4.25,
+                "total_score": 16.1
+            },
+            {
+                "sbd": "07000390",
+                "math": 9.75,
+                "literature": 8,
+                "english": 7.75,
+                "total_score": 25.5
+            },
+            {
+                "sbd": "07000391",
+                "math": 6.35,
+                "literature": 7,
+                "english": 2.75,
+                "total_score": 16.1
+            },
+            {
+                "sbd": "07000392",
+                "math": 6.75,
+                "literature": 6.75,
+                "english": 7,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000393",
+                "math": 9,
+                "literature": 7.75,
+                "english": 8.75,
+                "total_score": 25.5
+            },
+            {
+                "sbd": "07000394",
+                "math": 7.5,
+                "literature": 6.25,
+                "english": 1.75,
+                "total_score": 15.5
+            },
+            {
+                "sbd": "07000395",
+                "math": 9,
+                "literature": 7,
+                "english": 9,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000396",
+                "math": 8.25,
+                "literature": 7.75,
+                "english": 9.25,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000397",
+                "math": 7,
+                "literature": 5.5,
+                "english": 3.5,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000398",
+                "math": 8.75,
+                "literature": 7.75,
+                "english": 9,
+                "total_score": 25.5
+            },
+            {
+                "sbd": "07000399",
+                "math": 3.5,
+                "literature": 6.5,
+                "english": 2.5,
+                "total_score": 12.5
+            },
+            {
+                "sbd": "07000400",
+                "math": 7,
+                "literature": 6.25,
+                "english": 4.5,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000401",
+                "math": 7.75,
+                "literature": 6.75,
+                "english": 7,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000402",
+                "math": 9.5,
+                "literature": 8,
+                "english": 7.25,
+                "total_score": 24.75
+            },
+            {
+                "sbd": "07000403",
+                "math": 9.25,
+                "literature": 6.75,
+                "english": 3.25,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000404",
+                "math": 9.75,
+                "literature": 7.25,
+                "english": 5.75,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000405",
+                "math": 7.25,
+                "literature": 7.5,
+                "english": 2.75,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000406",
+                "math": 5.85,
+                "literature": 6.75,
+                "english": 1.75,
+                "total_score": 14.35
+            },
+            {
+                "sbd": "07000407",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 7,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000408",
+                "math": 5.6,
+                "literature": 7,
+                "english": 3.75,
+                "total_score": 16.35
+            },
+            {
+                "sbd": "07000409",
+                "math": 5.75,
+                "literature": 5.75,
+                "english": 3,
+                "total_score": 14.5
+            },
+            {
+                "sbd": "07000410",
+                "math": 6.5,
+                "literature": 6,
+                "english": 3.25,
+                "total_score": 15.75
+            },
+            {
+                "sbd": "07000411",
+                "math": 3.6,
+                "literature": 3.75,
+                "english": 5.25,
+                "total_score": 12.6
+            },
+            {
+                "sbd": "07000412",
+                "math": 9.75,
+                "literature": 8.75,
+                "english": 9.75,
+                "total_score": 28.25
+            },
+            {
+                "sbd": "07000413",
+                "math": 7.25,
+                "literature": 5.5,
+                "english": 4,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000414",
+                "math": 7.5,
+                "literature": 6.5,
+                "english": 8.5,
+                "total_score": 22.5
+            },
+            {
+                "sbd": "07000415",
+                "math": 4.75,
+                "literature": 4.25,
+                "english": 2.5,
+                "total_score": 11.5
+            },
+            {
+                "sbd": "07000416",
+                "math": 3.6,
+                "literature": 6,
+                "english": 2.5,
+                "total_score": 12.1
+            },
+            {
+                "sbd": "07000417",
+                "math": 5.35,
+                "literature": 8,
+                "english": 6.75,
+                "total_score": 20.1
+            },
+            {
+                "sbd": "07000418",
+                "math": 7.75,
+                "literature": 6,
+                "english": 3.75,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000419",
+                "math": 5,
+                "literature": 6.5,
+                "english": 2.75,
+                "total_score": 14.25
+            },
+            {
+                "sbd": "07000420",
+                "math": 5.5,
+                "literature": 7,
+                "english": 3,
+                "total_score": 15.5
+            },
+            {
+                "sbd": "07000421",
+                "math": 7.1,
+                "literature": 5.25,
+                "english": 5.25,
+                "total_score": 17.6
+            },
+            {
+                "sbd": "07000422",
+                "math": 8.25,
+                "literature": 7.5,
+                "english": 7,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000423",
+                "math": 5.5,
+                "literature": 7.5,
+                "english": 3,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000424",
+                "math": 4.75,
+                "literature": 7.5,
+                "english": 5.75,
+                "total_score": 18
+            },
+            {
+                "sbd": "07000425",
+                "math": 3.75,
+                "literature": 6.25,
+                "english": 3,
+                "total_score": 13
+            },
+            {
+                "sbd": "07000426",
+                "math": 8.25,
+                "literature": 8.5,
+                "english": 2.75,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000427",
+                "math": 6.75,
+                "literature": 6.75,
+                "english": 4,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000428",
+                "math": 7.5,
+                "literature": 8,
+                "english": 6.5,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000429",
+                "math": 6.75,
+                "literature": 5.25,
+                "english": 4.5,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000430",
+                "math": 5.75,
+                "literature": 6,
+                "english": 5.75,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000431",
+                "math": 9.25,
+                "literature": 8.25,
+                "english": 6.5,
+                "total_score": 24
+            },
+            {
+                "sbd": "07000432",
+                "math": 7.75,
+                "literature": 5.5,
+                "english": 6.25,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000433",
+                "math": 5.85,
+                "literature": 6,
+                "english": 3.75,
+                "total_score": 15.6
+            },
+            {
+                "sbd": "07000434",
+                "math": 5,
+                "literature": 2.75,
+                "english": 5.25,
+                "total_score": 13
+            },
+            {
+                "sbd": "07000435",
+                "math": 9.75,
+                "literature": 8.25,
+                "english": 8.25,
+                "total_score": 26.25
+            },
+            {
+                "sbd": "07000436",
+                "math": 6.5,
+                "literature": 7.75,
+                "english": 3.5,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000437",
+                "math": 6.75,
+                "literature": 5.5,
+                "english": 3.75,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000438",
+                "math": 5.75,
+                "literature": 7.25,
+                "english": 6,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000439",
+                "math": 5.25,
+                "literature": 7.5,
+                "english": 5,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000440",
+                "math": 6.25,
+                "literature": 6,
+                "english": 2.75,
+                "total_score": 15
+            },
+            {
+                "sbd": "07000441",
+                "math": 5.25,
+                "literature": 6.5,
+                "english": 3.5,
+                "total_score": 15.25
+            },
+            {
+                "sbd": "07000442",
+                "math": 6.75,
+                "literature": 7,
+                "english": 2.75,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000443",
+                "math": 8.5,
+                "literature": 8,
+                "english": 6.75,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000444",
+                "math": 6.6,
+                "literature": 7.5,
+                "english": 5.75,
+                "total_score": 19.85
+            },
+            {
+                "sbd": "07000445",
+                "math": 9.5,
+                "literature": 7.75,
+                "english": 9,
+                "total_score": 26.25
+            },
+            {
+                "sbd": "07000446",
+                "math": 8.25,
+                "literature": 7.5,
+                "english": 5,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000447",
+                "math": 5.5,
+                "literature": 6.75,
+                "english": 2,
+                "total_score": 14.25
+            },
+            {
+                "sbd": "07000448",
+                "math": 10,
+                "literature": 8.75,
+                "english": 8.25,
+                "total_score": 27
+            },
+            {
+                "sbd": "07000449",
+                "math": 7,
+                "literature": 7.5,
+                "english": 4,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000450",
+                "math": 5.6,
+                "literature": 7.5,
+                "english": 6.25,
+                "total_score": 19.35
+            },
+            {
+                "sbd": "07000451",
+                "math": 7.75,
+                "literature": 8.25,
+                "english": 7,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000452",
+                "math": 5.5,
+                "literature": 6.75,
+                "english": 4.25,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000453",
+                "math": 5.5,
+                "literature": 7,
+                "english": 5.25,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000454",
+                "math": 9.5,
+                "literature": 8.25,
+                "english": 9,
+                "total_score": 26.75
+            },
+            {
+                "sbd": "07000455",
+                "math": 9.75,
+                "literature": 8.5,
+                "english": 8.5,
+                "total_score": 26.75
+            },
+            {
+                "sbd": "07000456",
+                "math": 9.5,
+                "literature": 8.75,
+                "english": 7,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000457",
+                "math": 6,
+                "literature": 6.75,
+                "english": 2.5,
+                "total_score": 15.25
+            },
+            {
+                "sbd": "07000458",
+                "math": 3.75,
+                "literature": 4,
+                "english": 3.5,
+                "total_score": 11.25
+            },
+            {
+                "sbd": "07000459",
+                "math": 8.25,
+                "literature": 7.75,
+                "english": 4.75,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000460",
+                "math": 9,
+                "literature": 7.5,
+                "english": 8.5,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000461",
+                "math": 5.5,
+                "literature": 7.5,
+                "english": 6.75,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000462",
+                "math": 4.25,
+                "literature": 7.5,
+                "english": 2.5,
+                "total_score": 14.25
+            },
+            {
+                "sbd": "07000463",
+                "math": 5.25,
+                "literature": 7.25,
+                "english": 3.5,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000464",
+                "math": 7.25,
+                "literature": 8,
+                "english": 6,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000465",
+                "math": 4.75,
+                "literature": 6.75,
+                "english": 2.75,
+                "total_score": 14.25
+            },
+            {
+                "sbd": "07000466",
+                "math": 7,
+                "literature": 8.25,
+                "english": 4.5,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000467",
+                "math": 9.75,
+                "literature": 8.25,
+                "english": 10,
+                "total_score": 28
+            },
+            {
+                "sbd": "07000468",
+                "math": 9.75,
+                "literature": 7.75,
+                "english": 7.75,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000469",
+                "math": 2.75,
+                "literature": 3.75,
+                "english": 2.75,
+                "total_score": 9.25
+            },
+            {
+                "sbd": "07000470",
+                "math": 8.75,
+                "literature": 8.5,
+                "english": 7.5,
+                "total_score": 24.75
+            },
+            {
+                "sbd": "07000471",
+                "math": 5.85,
+                "literature": 6.25,
+                "english": 3.5,
+                "total_score": 15.6
+            },
+            {
+                "sbd": "07000472",
+                "math": 5.75,
+                "literature": 6.5,
+                "english": 4.5,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000473",
+                "math": 5.6,
+                "literature": 6.5,
+                "english": 2,
+                "total_score": 14.1
+            },
+            {
+                "sbd": "07000474",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 5.5,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000475",
+                "math": 5,
+                "literature": 6.25,
+                "english": 2.75,
+                "total_score": 14
+            },
+            {
+                "sbd": "07000476",
+                "math": 3.6,
+                "literature": 5,
+                "english": 2.25,
+                "total_score": 10.85
+            },
+            {
+                "sbd": "07000477",
+                "math": 8,
+                "literature": 8.5,
+                "english": 7,
+                "total_score": 23.5
+            },
+            {
+                "sbd": "07000478",
+                "math": 8.75,
+                "literature": 8,
+                "english": 8.5,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000479",
+                "math": 8.25,
+                "literature": 8,
+                "english": 7.5,
+                "total_score": 23.75
+            },
+            {
+                "sbd": "07000480",
+                "math": 2.75,
+                "literature": 5.75,
+                "english": 4,
+                "total_score": 12.5
+            },
+            {
+                "sbd": "07000481",
+                "math": 9,
+                "literature": 7.25,
+                "english": 4.5,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000482",
+                "math": 4.1,
+                "literature": 7.25,
+                "english": 2.5,
+                "total_score": 13.85
+            },
+            {
+                "sbd": "07000483",
+                "math": 9.25,
+                "literature": 8.5,
+                "english": 5,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000484",
+                "math": 5.25,
+                "literature": 7.75,
+                "english": 6,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000485",
+                "math": 5,
+                "literature": 8.5,
+                "english": 3.25,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000486",
+                "math": 5.75,
+                "literature": 7,
+                "english": 2.25,
+                "total_score": 15
+            },
+            {
+                "sbd": "07000487",
+                "math": 5.5,
+                "literature": 5.25,
+                "english": 3.25,
+                "total_score": 14
+            },
+            {
+                "sbd": "07000488",
+                "math": 10,
+                "literature": 8,
+                "english": 8.5,
+                "total_score": 26.5
+            },
+            {
+                "sbd": "07000489",
+                "math": 7.5,
+                "literature": 7.25,
+                "english": 3,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000490",
+                "math": 9.5,
+                "literature": 7.5,
+                "english": 5.75,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000491",
+                "math": 6.6,
+                "literature": 7.5,
+                "english": 4,
+                "total_score": 18.1
+            },
+            {
+                "sbd": "07000492",
+                "math": 6.75,
+                "literature": 6.5,
+                "english": 5,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000493",
+                "math": 9.25,
+                "literature": 7.5,
+                "english": 7.75,
+                "total_score": 24.5
+            },
+            {
+                "sbd": "07000494",
+                "math": 5.75,
+                "literature": 6.25,
+                "english": 3.5,
+                "total_score": 15.5
+            },
+            {
+                "sbd": "07000495",
+                "math": 7,
+                "literature": 7,
+                "english": 2.75,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000496",
+                "math": 8.5,
+                "literature": 7,
+                "english": 4,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000497",
+                "math": 8,
+                "literature": 7.75,
+                "english": 4.5,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000498",
+                "math": 7,
+                "literature": 4.25,
+                "english": 2.5,
+                "total_score": 13.75
+            },
+            {
+                "sbd": "07000499",
+                "math": 8.25,
+                "literature": 9,
+                "english": 8.25,
+                "total_score": 25.5
+            },
+            {
+                "sbd": "07000500",
+                "math": 5.25,
+                "literature": 5.25,
+                "english": 4.5,
+                "total_score": 15
+            },
+            {
+                "sbd": "07000501",
+                "math": 6,
+                "literature": 7.5,
+                "english": 3.5,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000502",
+                "math": 9,
+                "literature": 7,
+                "english": 3.5,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000503",
+                "math": 8.5,
+                "literature": 7.5,
+                "english": 9,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000504",
+                "math": 7.25,
+                "literature": 7,
+                "english": 6.25,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000505",
+                "math": 8.75,
+                "literature": 6.75,
+                "english": 5.5,
+                "total_score": 21
+            },
+            {
+                "sbd": "07000506",
+                "math": 9.5,
+                "literature": 6.25,
+                "english": 5.75,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000507",
+                "math": 7.75,
+                "literature": 4.25,
+                "english": 4.25,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000508",
+                "math": 7.75,
+                "literature": 7,
+                "english": 4,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000509",
+                "math": 7,
+                "literature": 7.5,
+                "english": 4.75,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000510",
+                "math": 6,
+                "literature": 3.75,
+                "english": 5,
+                "total_score": 14.75
+            },
+            {
+                "sbd": "07000511",
+                "math": 5.75,
+                "literature": 4.5,
+                "english": 3.5,
+                "total_score": 13.75
+            },
+            {
+                "sbd": "07000512",
+                "math": 9.75,
+                "literature": 7.25,
+                "english": 8.75,
+                "total_score": 25.75
+            },
+            {
+                "sbd": "07000513",
+                "math": 10,
+                "literature": 8.25,
+                "english": 10,
+                "total_score": 28.25
+            },
+            {
+                "sbd": "07000514",
+                "math": 8.25,
+                "literature": 5.25,
+                "english": 6.25,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000515",
+                "math": 8.5,
+                "literature": 7,
+                "english": 6.5,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000516",
+                "math": 8.75,
+                "literature": 6.25,
+                "english": 6.25,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000517",
+                "math": 9,
+                "literature": 8,
+                "english": 7.75,
+                "total_score": 24.75
+            },
+            {
+                "sbd": "07000518",
+                "math": 7.25,
+                "literature": 7.5,
+                "english": 3.75,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000519",
+                "math": 7.75,
+                "literature": 6.5,
+                "english": 2.5,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000520",
+                "math": 8.75,
+                "literature": 8,
+                "english": 7.5,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000521",
+                "math": 4.35,
+                "literature": 8,
+                "english": 2.5,
+                "total_score": 14.85
+            },
+            {
+                "sbd": "07000522",
+                "math": 6.85,
+                "literature": 7,
+                "english": 3.25,
+                "total_score": 17.1
+            },
+            {
+                "sbd": "07000523",
+                "math": 5.25,
+                "literature": 7.75,
+                "english": 8.25,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000524",
+                "math": 8.75,
+                "literature": 5.5,
+                "english": 5.5,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000525",
+                "math": 5,
+                "literature": 6.5,
+                "english": 6,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000526",
+                "math": 5,
+                "literature": 6.75,
+                "english": 4,
+                "total_score": 15.75
+            },
+            {
+                "sbd": "07000527",
+                "math": 8.5,
+                "literature": 7.25,
+                "english": 5,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000528",
+                "math": 8.25,
+                "literature": 6.75,
+                "english": 5.5,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000529",
+                "math": 8,
+                "literature": 7.75,
+                "english": 3.75,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000530",
+                "math": 7,
+                "literature": 6.5,
+                "english": 5.25,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000531",
+                "math": 6,
+                "literature": 7.75,
+                "english": 4.75,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000532",
+                "math": 8.25,
+                "literature": 8,
+                "english": 7.25,
+                "total_score": 23.5
+            },
+            {
+                "sbd": "07000533",
+                "math": 5.1,
+                "literature": 6.75,
+                "english": 1.75,
+                "total_score": 13.6
+            },
+            {
+                "sbd": "07000534",
+                "math": 5.6,
+                "literature": 6.5,
+                "english": 2.5,
+                "total_score": 14.6
+            },
+            {
+                "sbd": "07000535",
+                "math": 9.5,
+                "literature": 8.5,
+                "english": 9.25,
+                "total_score": 27.25
+            },
+            {
+                "sbd": "07000536",
+                "math": 5.5,
+                "literature": 8,
+                "english": 9.25,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000537",
+                "math": 9.5,
+                "literature": 7.75,
+                "english": 7.5,
+                "total_score": 24.75
+            },
+            {
+                "sbd": "07000538",
+                "math": 7,
+                "literature": 7.5,
+                "english": 6.75,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000539",
+                "math": 8.5,
+                "literature": 6.5,
+                "english": 5.5,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000540",
+                "math": 7.75,
+                "literature": 7.25,
+                "english": 8.25,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000541",
+                "math": 9.25,
+                "literature": 8,
+                "english": 8.5,
+                "total_score": 25.75
+            },
+            {
+                "sbd": "07000542",
+                "math": 2.85,
+                "literature": 4.75,
+                "english": 1.75,
+                "total_score": 9.35
+            },
+            {
+                "sbd": "07000543",
+                "math": 7.25,
+                "literature": 8,
+                "english": 4,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000544",
+                "math": 8.5,
+                "literature": 7.5,
+                "english": 6.25,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000545",
+                "math": 5.5,
+                "literature": 7.5,
+                "english": 3.5,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000546",
+                "math": 4.25,
+                "literature": 4.25,
+                "english": 3.25,
+                "total_score": 11.75
+            },
+            {
+                "sbd": "07000547",
+                "math": 3.75,
+                "literature": 5.5,
+                "english": 2.25,
+                "total_score": 11.5
+            },
+            {
+                "sbd": "07000548",
+                "math": 7.25,
+                "literature": 7,
+                "english": 5.25,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000549",
+                "math": 7.6,
+                "literature": 6.75,
+                "english": 5.25,
+                "total_score": 19.6
+            },
+            {
+                "sbd": "07000550",
+                "math": 4.6,
+                "literature": 4.75,
+                "english": 2,
+                "total_score": 11.35
+            },
+            {
+                "sbd": "07000551",
+                "math": 7.75,
+                "literature": 7.25,
+                "english": 7,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000552",
+                "math": 7.35,
+                "literature": 6.25,
+                "english": 7.5,
+                "total_score": 21.1
+            },
+            {
+                "sbd": "07000553",
+                "math": 8.75,
+                "literature": 7.5,
+                "english": 8.25,
+                "total_score": 24.5
+            },
+            {
+                "sbd": "07000554",
+                "math": 6.5,
+                "literature": 6.5,
+                "english": 3.25,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000555",
+                "math": 7.5,
+                "literature": 6.75,
+                "english": 2.75,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000556",
+                "math": 4.75,
+                "literature": 7.75,
+                "english": 3.75,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000557",
+                "math": 2.35,
+                "literature": 1.5,
+                "english": 2,
+                "total_score": 5.85
+            },
+            {
+                "sbd": "07000558",
+                "math": 8.5,
+                "literature": 8.5,
+                "english": 5.25,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000559",
+                "math": 9.25,
+                "literature": 7.75,
+                "english": 7.25,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000560",
+                "math": 4.25,
+                "literature": 5.5,
+                "english": 3.75,
+                "total_score": 13.5
+            },
+            {
+                "sbd": "07000561",
+                "math": 5.75,
+                "literature": 6.75,
+                "english": 5.75,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000562",
+                "math": 5.85,
+                "literature": 6.5,
+                "english": 3.25,
+                "total_score": 15.6
+            },
+            {
+                "sbd": "07000563",
+                "math": 8.5,
+                "literature": 7.5,
+                "english": 5.75,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000564",
+                "math": 6.5,
+                "literature": 7.25,
+                "english": 4.5,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000565",
+                "math": 5.75,
+                "literature": 7.25,
+                "english": 2.75,
+                "total_score": 15.75
+            },
+            {
+                "sbd": "07000566",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 6.75,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000567",
+                "math": 9,
+                "literature": 8.25,
+                "english": 5.25,
+                "total_score": 22.5
+            },
+            {
+                "sbd": "07000568",
+                "math": 7.25,
+                "literature": 7.5,
+                "english": 4.75,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000569",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 8.75,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000570",
+                "math": 7.25,
+                "literature": 7.5,
+                "english": 7.25,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000571",
+                "math": 6,
+                "literature": 5.75,
+                "english": 7.25,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000572",
+                "math": 4.85,
+                "literature": 5.25,
+                "english": 4,
+                "total_score": 14.1
+            },
+            {
+                "sbd": "07000573",
+                "math": 4,
+                "literature": 3.5,
+                "english": 2,
+                "total_score": 9.5
+            },
+            {
+                "sbd": "07000574",
+                "math": 6.25,
+                "literature": 7.5,
+                "english": 5.5,
+                "total_score": 19.25
+            },
+            {
+                "sbd": "07000575",
+                "math": 7,
+                "literature": 6,
+                "english": 7.5,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000576",
+                "math": 8.25,
+                "literature": 8,
+                "english": 7,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000577",
+                "math": 4.45,
+                "literature": 7,
+                "english": 3.25,
+                "total_score": 14.7
+            },
+            {
+                "sbd": "07000578",
+                "math": 3,
+                "literature": 5.75,
+                "english": 4,
+                "total_score": 12.75
+            },
+            {
+                "sbd": "07000579",
+                "math": 4.6,
+                "literature": 8.5,
+                "english": 4.25,
+                "total_score": 17.35
+            },
+            {
+                "sbd": "07000580",
+                "math": 2.45,
+                "literature": 6,
+                "english": 1.5,
+                "total_score": 9.95
+            },
+            {
+                "sbd": "07000581",
+                "math": 8.25,
+                "literature": 8.25,
+                "english": 5.5,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000582",
+                "math": 6.35,
+                "literature": 8.5,
+                "english": 6.25,
+                "total_score": 21.1
+            },
+            {
+                "sbd": "07000583",
+                "math": 7,
+                "literature": 6,
+                "english": 6,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000584",
+                "math": 9,
+                "literature": 7.25,
+                "english": 7.5,
+                "total_score": 23.75
+            },
+            {
+                "sbd": "07000585",
+                "math": 8.75,
+                "literature": 8.5,
+                "english": 8.5,
+                "total_score": 25.75
+            },
+            {
+                "sbd": "07000586",
+                "math": 5.45,
+                "literature": 7,
+                "english": 4.5,
+                "total_score": 16.95
+            },
+            {
+                "sbd": "07000587",
+                "math": 6.1,
+                "literature": 7.25,
+                "english": 3.25,
+                "total_score": 16.6
+            },
+            {
+                "sbd": "07000588",
+                "math": 5.5,
+                "literature": 6,
+                "english": 3.5,
+                "total_score": 15
+            },
+            {
+                "sbd": "07000589",
+                "math": 7,
+                "literature": 7.75,
+                "english": 3.75,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000590",
+                "math": 5.5,
+                "literature": 6.75,
+                "english": 6.75,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000591",
+                "math": 3.45,
+                "literature": 5.25,
+                "english": 5,
+                "total_score": 13.7
+            },
+            {
+                "sbd": "07000592",
+                "math": 4.1,
+                "literature": 7.75,
+                "english": 4.25,
+                "total_score": 16.1
+            },
+            {
+                "sbd": "07000593",
+                "math": 5.5,
+                "literature": 7.25,
+                "english": 4.25,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000594",
+                "math": 7.25,
+                "literature": 7.5,
+                "english": 3,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000595",
+                "math": 7,
+                "literature": 7.5,
+                "english": 7.25,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000596",
+                "math": 5,
+                "literature": 5.75,
+                "english": 4.5,
+                "total_score": 15.25
+            },
+            {
+                "sbd": "07000597",
+                "math": 5.5,
+                "literature": 6.25,
+                "english": 4.5,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000598",
+                "math": 5.25,
+                "literature": 6.75,
+                "english": 4,
+                "total_score": 16
+            },
+            {
+                "sbd": "07000599",
+                "math": 3.5,
+                "literature": 6.25,
+                "english": 5,
+                "total_score": 14.75
+            },
+            {
+                "sbd": "07000600",
+                "math": 9.25,
+                "literature": 8.25,
+                "english": 9.25,
+                "total_score": 26.75
+            },
+            {
+                "sbd": "07000601",
+                "math": 7.25,
+                "literature": 4,
+                "english": 3,
+                "total_score": 14.25
+            },
+            {
+                "sbd": "07000602",
+                "math": 8.75,
+                "literature": 6.25,
+                "english": 2.5,
+                "total_score": 17.5
+            },
+            {
+                "sbd": "07000603",
+                "math": 6,
+                "literature": 7.5,
+                "english": 5,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000604",
+                "math": 6.5,
+                "literature": 7.75,
+                "english": 7.25,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000605",
+                "math": 7.25,
+                "literature": 4.75,
+                "english": 2.75,
+                "total_score": 14.75
+            },
+            {
+                "sbd": "07000606",
+                "math": 5.5,
+                "literature": 7,
+                "english": 5.25,
+                "total_score": 17.75
+            },
+            {
+                "sbd": "07000607",
+                "math": 7.25,
+                "literature": 6.75,
+                "english": 5.5,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000608",
+                "math": 9,
+                "literature": 7,
+                "english": 7.75,
+                "total_score": 23.75
+            },
+            {
+                "sbd": "07000609",
+                "math": 4.5,
+                "literature": 5.5,
+                "english": 6.5,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000610",
+                "math": 6.5,
+                "literature": 7.5,
+                "english": 5.75,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000611",
+                "math": 7,
+                "literature": 6.75,
+                "english": 4.75,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000612",
+                "math": 7.5,
+                "literature": 7.75,
+                "english": 5.75,
+                "total_score": 21
+            },
+            {
+                "sbd": "07000613",
+                "math": 7.6,
+                "literature": 8.75,
+                "english": 8.75,
+                "total_score": 25.1
+            },
+            {
+                "sbd": "07000614",
+                "math": 9.5,
+                "literature": 8.5,
+                "english": 9.75,
+                "total_score": 27.75
+            },
+            {
+                "sbd": "07000615",
+                "math": 6.1,
+                "literature": 7.75,
+                "english": 5,
+                "total_score": 18.85
+            },
+            {
+                "sbd": "07000616",
+                "math": 9,
+                "literature": 8.5,
+                "english": 7.25,
+                "total_score": 24.75
+            },
+            {
+                "sbd": "07000617",
+                "math": 5.35,
+                "literature": 5.75,
+                "english": 5.25,
+                "total_score": 16.35
+            },
+            {
+                "sbd": "07000618",
+                "math": 8.5,
+                "literature": 8.25,
+                "english": 5.25,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000619",
+                "math": 9.25,
+                "literature": 7.25,
+                "english": 6.75,
+                "total_score": 23.25
+            },
+            {
+                "sbd": "07000620",
+                "math": 6.75,
+                "literature": 6.75,
+                "english": 8,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000621",
+                "math": 4.5,
+                "literature": 8,
+                "english": 5.75,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000622",
+                "math": 6,
+                "literature": 8,
+                "english": 9.75,
+                "total_score": 23.75
+            },
+            {
+                "sbd": "07000623",
+                "math": 6.75,
+                "literature": 8.25,
+                "english": 7,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000624",
+                "math": 8.75,
+                "literature": 7.5,
+                "english": 6.5,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000625",
+                "math": 7.5,
+                "literature": 6.5,
+                "english": 4.5,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000626",
+                "math": 3.85,
+                "literature": 5,
+                "english": 4,
+                "total_score": 12.85
+            },
+            {
+                "sbd": "07000627",
+                "math": 9.25,
+                "literature": 7.25,
+                "english": 7.75,
+                "total_score": 24.25
+            },
+            {
+                "sbd": "07000628",
+                "math": 7.5,
+                "literature": 5.75,
+                "english": 3,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000629",
+                "math": 8.25,
+                "literature": 7.75,
+                "english": 7,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000630",
+                "math": 9.5,
+                "literature": 7.5,
+                "english": 5.75,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000631",
+                "math": 4.25,
+                "literature": 8,
+                "english": 3.25,
+                "total_score": 15.5
+            },
+            {
+                "sbd": "07000632",
+                "math": 9.5,
+                "literature": 7.25,
+                "english": 8,
+                "total_score": 24.75
+            },
+            {
+                "sbd": "07000633",
+                "math": 7.25,
+                "literature": 7,
+                "english": 4,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000634",
+                "math": 9.5,
+                "literature": 7.75,
+                "english": 7.75,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000635",
+                "math": 5.75,
+                "literature": 6.75,
+                "english": 4.5,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000636",
+                "math": 6.75,
+                "literature": 7.25,
+                "english": 4,
+                "total_score": 18
+            },
+            {
+                "sbd": "07000637",
+                "math": 7.75,
+                "literature": 6.5,
+                "english": 4.75,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000638",
+                "math": 5.75,
+                "literature": 6.25,
+                "english": 3.25,
+                "total_score": 15.25
+            },
+            {
+                "sbd": "07000639",
+                "math": 8.25,
+                "literature": 7.25,
+                "english": 6,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000640",
+                "math": 9.5,
+                "literature": 8.5,
+                "english": 9,
+                "total_score": 27
+            },
+            {
+                "sbd": "07000641",
+                "math": 7.5,
+                "literature": 8,
+                "english": 7.5,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000642",
+                "math": 9.25,
+                "literature": 8.25,
+                "english": 6.5,
+                "total_score": 24
+            },
+            {
+                "sbd": "07000643",
+                "math": 5.6,
+                "literature": 5.5,
+                "english": 3.75,
+                "total_score": 14.85
+            },
+            {
+                "sbd": "07000644",
+                "math": 5.35,
+                "literature": 7,
+                "english": 5.25,
+                "total_score": 17.6
+            },
+            {
+                "sbd": "07000645",
+                "math": 3.85,
+                "literature": 3,
+                "english": 2.75,
+                "total_score": 9.6
+            },
+            {
+                "sbd": "07000646",
+                "math": 5.1,
+                "literature": 7.5,
+                "english": 6,
+                "total_score": 18.6
+            },
+            {
+                "sbd": "07000647",
+                "math": 6.75,
+                "literature": 6.75,
+                "english": 3.75,
+                "total_score": 17.25
+            },
+            {
+                "sbd": "07000648",
+                "math": 5.85,
+                "literature": 7,
+                "english": 2.5,
+                "total_score": 15.35
+            },
+            {
+                "sbd": "07000649",
+                "math": 5,
+                "literature": 5.5,
+                "english": 2.25,
+                "total_score": 12.75
+            },
+            {
+                "sbd": "07000650",
+                "math": 4.1,
+                "literature": 7.5,
+                "english": 2.5,
+                "total_score": 14.1
+            },
+            {
+                "sbd": "07000651",
+                "math": 9,
+                "literature": 8.5,
+                "english": 7.75,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000652",
+                "math": 6,
+                "literature": 7,
+                "english": 5.75,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000653",
+                "math": 8.25,
+                "literature": 6.75,
+                "english": 5.25,
+                "total_score": 20.25
+            },
+            {
+                "sbd": "07000654",
+                "math": 9.25,
+                "literature": 7,
+                "english": 6.5,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000655",
+                "math": 2.75,
+                "literature": 4.75,
+                "english": 2.5,
+                "total_score": 10
+            },
+            {
+                "sbd": "07000656",
+                "math": 4.25,
+                "literature": 4.25,
+                "english": 3,
+                "total_score": 11.5
+            },
+            {
+                "sbd": "07000657",
+                "math": 6.25,
+                "literature": 7.75,
+                "english": 4.75,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000658",
+                "math": 9,
+                "literature": 7.75,
+                "english": 8.75,
+                "total_score": 25.5
+            },
+            {
+                "sbd": "07000659",
+                "math": 8.25,
+                "literature": 8.25,
+                "english": 6,
+                "total_score": 22.5
+            },
+            {
+                "sbd": "07000660",
+                "math": 7.75,
+                "literature": 7.75,
+                "english": 6.75,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000661",
+                "math": 9,
+                "literature": 8,
+                "english": 4.5,
+                "total_score": 21.5
+            },
+            {
+                "sbd": "07000662",
+                "math": 6.85,
+                "literature": 7,
+                "english": 3,
+                "total_score": 16.85
+            },
+            {
+                "sbd": "07000663",
+                "math": 8.5,
+                "literature": 8.25,
+                "english": 7,
+                "total_score": 23.75
+            },
+            {
+                "sbd": "07000664",
+                "math": 7,
+                "literature": 5.5,
+                "english": 3.25,
+                "total_score": 15.75
+            },
+            {
+                "sbd": "07000665",
+                "math": 8.5,
+                "literature": 7.25,
+                "english": 9.25,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000666",
+                "math": 6.5,
+                "literature": 6.5,
+                "english": 3.75,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000667",
+                "math": 10,
+                "literature": 7.25,
+                "english": 4,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000668",
+                "math": 9,
+                "literature": 7.5,
+                "english": 7,
+                "total_score": 23.5
+            },
+            {
+                "sbd": "07000669",
+                "math": 4.1,
+                "literature": 5.25,
+                "english": 4.5,
+                "total_score": 13.85
+            },
+            {
+                "sbd": "07000670",
+                "math": 7,
+                "literature": 5.5,
+                "english": 3.75,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000671",
+                "math": 8.25,
+                "literature": 8,
+                "english": 5.5,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000672",
+                "math": 9,
+                "literature": 8.25,
+                "english": 8.75,
+                "total_score": 26
+            },
+            {
+                "sbd": "07000673",
+                "math": 5.25,
+                "literature": 3.25,
+                "english": 2.5,
+                "total_score": 11
+            },
+            {
+                "sbd": "07000674",
+                "math": 7.25,
+                "literature": 7,
+                "english": 4,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000675",
+                "math": 7.5,
+                "literature": 7.25,
+                "english": 3.5,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000676",
+                "math": 5.35,
+                "literature": 5.75,
+                "english": 3.5,
+                "total_score": 14.6
+            },
+            {
+                "sbd": "07000677",
+                "math": 6.5,
+                "literature": 6,
+                "english": 4,
+                "total_score": 16.5
+            },
+            {
+                "sbd": "07000678",
+                "math": 7.75,
+                "literature": 8.75,
+                "english": 6.5,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000679",
+                "math": 9.75,
+                "literature": 7.75,
+                "english": 7.5,
+                "total_score": 25
+            },
+            {
+                "sbd": "07000680",
+                "math": 9.25,
+                "literature": 9,
+                "english": 7,
+                "total_score": 25.25
+            },
+            {
+                "sbd": "07000681",
+                "math": 8.75,
+                "literature": 7.25,
+                "english": 3.75,
+                "total_score": 19.75
+            },
+            {
+                "sbd": "07000682",
+                "math": 5.25,
+                "literature": 5.25,
+                "english": 2,
+                "total_score": 12.5
+            },
+            {
+                "sbd": "07000683",
+                "math": 6.25,
+                "literature": 6,
+                "english": 3.25,
+                "total_score": 15.5
+            },
+            {
+                "sbd": "07000684",
+                "math": 7.5,
+                "literature": 7.25,
+                "english": 4.25,
+                "total_score": 19
+            },
+            {
+                "sbd": "07000685",
+                "math": 3.1,
+                "literature": 5.75,
+                "english": 1.75,
+                "total_score": 10.6
+            },
+            {
+                "sbd": "07000686",
+                "math": 3.5,
+                "literature": 4,
+                "english": 3,
+                "total_score": 10.5
+            },
+            {
+                "sbd": "07000687",
+                "math": 7.75,
+                "literature": 7.75,
+                "english": 4.5,
+                "total_score": 20
+            },
+            {
+                "sbd": "07000688",
+                "math": 7.25,
+                "literature": 5.75,
+                "english": 3.25,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000689",
+                "math": 5.85,
+                "literature": 4.25,
+                "english": 5.25,
+                "total_score": 15.35
+            },
+            {
+                "sbd": "07000690",
+                "math": 7.75,
+                "literature": 6.5,
+                "english": 8.5,
+                "total_score": 22.75
+            },
+            {
+                "sbd": "07000691",
+                "math": 5.1,
+                "literature": 8.75,
+                "english": 3.75,
+                "total_score": 17.6
+            },
+            {
+                "sbd": "07000692",
+                "math": 7,
+                "literature": 8,
+                "english": 3.75,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000693",
+                "math": 6.5,
+                "literature": 8.5,
+                "english": 3.25,
+                "total_score": 18.25
+            },
+            {
+                "sbd": "07000694",
+                "math": 8.25,
+                "literature": 7.75,
+                "english": 2.5,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000695",
+                "math": 5.1,
+                "literature": 7.25,
+                "english": 5.25,
+                "total_score": 17.6
+            },
+            {
+                "sbd": "07000696",
+                "math": 8.5,
+                "literature": 8.25,
+                "english": 4.5,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000697",
+                "math": 4.25,
+                "literature": 5,
+                "english": 3.25,
+                "total_score": 12.5
+            },
+            {
+                "sbd": "07000698",
+                "math": 5,
+                "literature": 4,
+                "english": 1,
+                "total_score": 10
+            },
+            {
+                "sbd": "07000699",
+                "math": 7.5,
+                "literature": 8,
+                "english": 4,
+                "total_score": 19.5
+            },
+            {
+                "sbd": "07000700",
+                "math": 7.5,
+                "literature": 8.75,
+                "english": 6.25,
+                "total_score": 22.5
+            },
+            {
+                "sbd": "07000701",
+                "math": 5.1,
+                "literature": 6.75,
+                "english": 3.5,
+                "total_score": 15.35
+            },
+            {
+                "sbd": "07000702",
+                "math": 6.25,
+                "literature": 5,
+                "english": 3.75,
+                "total_score": 15
+            },
+            {
+                "sbd": "07000703",
+                "math": 8.25,
+                "literature": 8.5,
+                "english": 6.25,
+                "total_score": 23
+            },
+            {
+                "sbd": "07000704",
+                "math": 8,
+                "literature": 7,
+                "english": 5.5,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000705",
+                "math": 8.75,
+                "literature": 7.25,
+                "english": 8,
+                "total_score": 24
+            },
+            {
+                "sbd": "07000706",
+                "math": 6.25,
+                "literature": 2.75,
+                "english": 4.5,
+                "total_score": 13.5
+            },
+            {
+                "sbd": "07000707",
+                "math": 9.25,
+                "literature": 8,
+                "english": 4.5,
+                "total_score": 21.75
+            },
+            {
+                "sbd": "07000708",
+                "math": 9.25,
+                "literature": 7.25,
+                "english": 4,
+                "total_score": 20.5
+            },
+            {
+                "sbd": "07000709",
+                "math": 8.5,
+                "literature": 7,
+                "english": 3,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000710",
+                "math": 9.75,
+                "literature": 8.5,
+                "english": 8.25,
+                "total_score": 26.5
+            },
+            {
+                "sbd": "07000711",
+                "math": 6.5,
+                "literature": 8,
+                "english": 6.5,
+                "total_score": 21
+            },
+            {
+                "sbd": "07000712",
+                "math": 8.25,
+                "literature": 7,
+                "english": 6.75,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000713",
+                "math": 4.75,
+                "literature": 4.75,
+                "english": 4,
+                "total_score": 13.5
+            },
+            {
+                "sbd": "07000714",
+                "math": 7.25,
+                "literature": 5.25,
+                "english": 4.5,
+                "total_score": 17
+            },
+            {
+                "sbd": "07000715",
+                "math": 8.25,
+                "literature": 6,
+                "english": 8,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000716",
+                "math": 6.75,
+                "literature": 6.5,
+                "english": 3.5,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000717",
+                "math": 7.35,
+                "literature": 7.75,
+                "english": 3.25,
+                "total_score": 18.35
+            },
+            {
+                "sbd": "07000718",
+                "math": 8.5,
+                "literature": 7.75,
+                "english": 6,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000719",
+                "math": 6.75,
+                "literature": 7.25,
+                "english": 2.75,
+                "total_score": 16.75
+            },
+            {
+                "sbd": "07000720",
+                "math": 7.5,
+                "literature": 9,
+                "english": 9,
+                "total_score": 25.5
+            },
+            {
+                "sbd": "07000721",
+                "math": 6,
+                "literature": 7.5,
+                "english": 5,
+                "total_score": 18.5
+            },
+            {
+                "sbd": "07000722",
+                "math": 7.25,
+                "literature": 5,
+                "english": 4,
+                "total_score": 16.25
+            },
+            {
+                "sbd": "07000723",
+                "math": 5.6,
+                "literature": 7,
+                "english": 6.75,
+                "total_score": 19.35
+            },
+            {
+                "sbd": "07000724",
+                "math": 7,
+                "literature": 8.25,
+                "english": 7,
+                "total_score": 22.25
+            },
+            {
+                "sbd": "07000725",
+                "math": 1.85,
+                "literature": 6.25,
+                "english": 3.25,
+                "total_score": 11.35
+            },
+            {
+                "sbd": "07000726",
+                "math": 5.75,
+                "literature": 7.25,
+                "english": 2.75,
+                "total_score": 15.75
+            },
+            {
+                "sbd": "07000727",
+                "math": 7.35,
+                "literature": 7.5,
+                "english": 3.75,
+                "total_score": 18.6
+            },
+            {
+                "sbd": "07000728",
+                "math": 9.5,
+                "literature": 6,
+                "english": 5.75,
+                "total_score": 21.25
+            },
+            {
+                "sbd": "07000729",
+                "math": 8.25,
+                "literature": 6.5,
+                "english": 4,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000730",
+                "math": 8,
+                "literature": 8.25,
+                "english": 4.5,
+                "total_score": 20.75
+            },
+            {
+                "sbd": "07000731",
+                "math": 8.25,
+                "literature": 6,
+                "english": 4.5,
+                "total_score": 18.75
+            },
+            {
+                "sbd": "07000732",
+                "math": 8.75,
+                "literature": 7,
+                "english": 6.25,
+                "total_score": 22
+            },
+            {
+                "sbd": "07000733",
+                "math": 5.5,
+                "literature": 8,
+                "english": 2.25,
+                "total_score": 15.75
+            }
+        ];
+
+        let currentSortOrder = 'none';
+
+        function renderTable(data) {
+            const tbody = document.getElementById("data-body");
+            tbody.innerHTML = "";
+
+            data.forEach((student, index) => {
+                const row = document.createElement("tr");
+                const formattedSbd = String(student.sbd).padStart(8, '0');
+
+                row.innerHTML = `
+                <td style="color: #94a3b8; font-size: 13px;">${index + 1}</td>
+                <td style="font-weight: 600;">${formattedSbd}</td>
+                <td>${parseFloat(student.math).toFixed(2)}</td>
+                <td>${parseFloat(student.literature).toFixed(2)}</td>
+                <td>${parseFloat(student.english).toFixed(2)}</td>
+                <td style="font-weight: bold; color: var(--primary-color);">${parseFloat(student.total_score).toFixed(2)}</td>
+            `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById("total-count").innerText = data.length;
+        }
+
+        function toggleSort() {
+            const headerBtn = document.getElementById("sort-total");
+
+            if (currentSortOrder === 'none' || currentSortOrder === 'asc') {
+                rawData.sort((a, b) => parseFloat(b.total_score) - parseFloat(a.total_score));
+                currentSortOrder = 'desc';
+                headerBtn.innerText = "Tổng Điểm ⬇";
+            } else {
+                rawData.sort((a, b) => parseFloat(a.total_score) - parseFloat(b.total_score));
+                currentSortOrder = 'asc';
+                headerBtn.innerText = "Tổng Điểm ⬆";
+            }
+
+            renderTable(rawData);
+        }
+
+        function countStudents() {
+            const threshold = parseFloat(document.getElementById("score-threshold").value);
+
+            if (isNaN(threshold)) {
+                document.getElementById("student-count").innerText = "0";
+                return;
+            }
+
+            const matchCount = rawData.filter(student => parseFloat(student.total_score) >= threshold).length;
+
+            document.getElementById("student-count").innerText = matchCount;
+        }
+
+        window.onload = function () {
+            renderTable(rawData);
+            countStudents();
+        }
+    </script>
+
+</body>
+
+</html>
